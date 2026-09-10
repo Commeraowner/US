@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Us — A Little World</title>
+  <style>
+    /* ==========================================================================
+       CSS VARIABLES & BASE STYLES
+       ========================================================================== */
+    :root {
+      /* Theme Interpolation Variables (Dynamic Time of Day) */
+      --bg-gradient-top: #FFF4D6;
+      --bg-gradient-bottom: #FFFDF7;
+      --accent-primary: #FF9F43;
+      --accent-secondary: #FFB84D;
+      --accent-glow: rgba(255, 159, 67, 0.35);
+      --glass-bg: rgba(255, 255, 255, 0.55);
+      --glass-border: rgba(255, 255, 255, 0.7);
+      --glass-shadow: 0 8px 32px 0 rgba(255, 159, 67, 0.08);
+      --text-main: #4A3E3D;
+      --text-muted: #8C7A78;
+      --cloud-color: #FFFFFF;
+      --sky-element-opacity: 0.8;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      
+      /* Standard Palette */
+      --color-orange: #FF9F43;
+      --color-tangerine: #FFB84D;
+      --color-yellow: #FFD166;
+      --color-cream: #FFFDF7;
+    }
+
+    /* Time-of-day Theme Overrides */
+    body.theme-morning {
+      --bg-gradient-top: #FFE7A8;
+      --bg-gradient-bottom: #FFFDF7;
+      --accent-primary: #FFB84D;
+      --accent-glow: rgba(255, 184, 77, 0.3);
+      --glass-bg: rgba(255, 255, 255, 0.65);
+      --text-main: #3D3535;
+    }
+
+    body.theme-afternoon {
+      --bg-gradient-top: #FFD166;
+      --bg-gradient-bottom: #FFF4D6;
+      --accent-primary: #FF9F43;
+      --accent-glow: rgba(255, 159, 67, 0.35);
+      --glass-bg: rgba(255, 255, 255, 0.6);
+      --text-main: #403028;
+    }
+
+    body.theme-evening {
+      --bg-gradient-top: #FF9F43;
+      --bg-gradient-bottom: #FFE7A8;
+      --accent-primary: #E65100;
+      --accent-glow: rgba(230, 81, 0, 0.3);
+      --glass-bg: rgba(255, 248, 240, 0.55);
+      --text-main: #2C1810;
+    }
+
+    body.theme-night {
+      --bg-gradient-top: #1A1C29;
+      --bg-gradient-bottom: #0D0E15;
+      --accent-primary: #FFD166;
+      --accent-glow: rgba(255, 209, 102, 0.25);
+      --glass-bg: rgba(30, 34, 53, 0.55);
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      --text-main: #F0E6D2;
+      --text-muted: #A09BB0;
+      --cloud-color: #2A2E45;
+      --sky-element-opacity: 0.3;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+      background: #000;
+      color: var(--text-main);
+    }
+
+    /* Outer Wrapper for dynamic responsive sizing */
+    #app-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background: linear-gradient(180deg, var(--bg-gradient-top) 0%, var(--bg-gradient-bottom) 100%);
+      transition: background 3s ease-in-out;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Ambient Dynamic Background Particle Canvas */
+    #ambient-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Reusable Glass Effect */
+    .glass-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      border-radius: 28px;
+      transition: background 0.5s ease, border 0.5s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .glass-button {
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      border-radius: 20px;
+      padding: 14px 20px;
+      color: var(--text-main);
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      outline: none;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .glass-button:active {
+      transform: scale(0.92);
+    }
+
+    /* ==========================================================================
+       1. ENTRY & ACCESS SCREEN
+       ========================================================================== */
+    #entry-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: linear-gradient(180deg, #FFE7A8 0%, #FFFDF7 100%);
+      transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .entry-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      max-width: 320px;
+      width: 100%;
+      z-index: 2;
+    }
+
+    .mascot-wrapper {
+      width: 120px;
+      height: 90px;
+      position: relative;
+      margin-bottom: 24px;
+    }
+
+    /* SVG Mascot Expressions & Animation */
+    .cloud-svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 12px 24px rgba(255, 159, 67, 0.18));
+      animation: floatMascot 4s ease-in-out infinite;
+    }
+
+    @keyframes floatMascot {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-10px) rotate(1deg); }
+    }
+
+    .entry-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #4A3E3D;
+      margin-bottom: 6px;
+      letter-spacing: -0.02em;
+    }
+
+    .entry-subtitle {
+      font-size: 0.95rem;
+      color: #8C7A78;
+      margin-bottom: 32px;
+    }
+
+    .code-input-container {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 28px;
+    }
+
+    .code-box {
+      width: 44px;
+      height: 54px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.8);
+      border: 1.5px solid rgba(255, 159, 67, 0.3);
+      backdrop-filter: blur(10px);
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #FF9F43;
+      text-align: center;
+      line-height: 54px;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 4px 12px rgba(255, 159, 67, 0.05);
+    }
+
+    .code-box.active {
+      border-color: #FF9F43;
+      transform: scale(1.05);
+      box-shadow: 0 6px 16px rgba(255, 159, 67, 0.2);
+      background: #FFFFFF;
+    }
+
+    .hidden-input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+      top: -9999px;
+    }
+
+    .continue-btn {
+      width: 100%;
+      padding: 16px;
+      font-size: 1rem;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #FF9F43 0%, #FFB84D 100%);
+      color: white;
+      border: none;
+      box-shadow: 0 10px 24px rgba(255, 159, 67, 0.35);
+      font-weight: 600;
+      cursor: pointer;
+      opacity: 0.5;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .continue-btn.ready {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .continue-btn.ready:active {
+      transform: scale(0.96);
+    }
+
+    /* Rocket Takeoff Animation Sequence */
+    #entry-screen.launching .mascot-wrapper {
+      animation: rocketTakeoff 2.2s cubic-bezier(0.45, 0, 0.55, 1) forwards;
+    }
+
+    #entry-screen.launching .entry-content > *:not(.mascot-wrapper) {
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    @keyframes rocketTakeoff {
+      0% { transform: scale(1) translateY(0); }
+      15% { transform: scale(0.85) translateY(10px); }
+      30% { transform: scale(1.15) translateY(-5px); }
+      45% { transform: scale(0.95) translateY(0); }
+      100% { transform: scale(0.1) translateY(-120vh); opacity: 0; }
+    }
+
+    /* Flash Overlay for launch transition */
+    #launch-flash {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle, #FFF4D6 0%, #FF9F43 100%);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 99;
+      transition: opacity 0.6s ease;
+    }
+
+    /* ==========================================================================
+       2. MAIN INTERFACE & SKY VIEWPORT
+       ========================================================================== */
+    #main-world {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      transition: opacity 1s ease 0.5s;
+      z-index: 2;
+    }
+
+    #main-world.visible {
+      opacity: 1;
+    }
+
+    /* Top Navigation Header */
+    .top-header {
+      padding-top: calc(var(--safe-top) + 16px);
+      padding-left: 24px;
+      padding-right: 24px;
+      padding-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .header-names {
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-sparkle {
+      color: var(--accent-primary);
+      font-size: 0.9rem;
+      animation: pulseSparkle 2s ease-in-out infinite;
+    }
+
+    @keyframes pulseSparkle {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.3); opacity: 1; }
+    }
+
+    .header-subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .time-badge {
+      padding: 6px 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 20px;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      color: var(--text-main);
+    }
+
+    /* Main Content Viewport */
+    .view-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .view-page {
+      position: absolute;
+      inset: 0;
+      padding: 16px 20px calc(80px + var(--safe-bottom)) 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(12px) scale(0.98);
+      transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .view-page.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+    }
+
+    /* Mascot Display Centerpiece */
+    .world-mascot-container {
+      margin: 12px 0 20px 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .interactive-cloud {
+      width: 140px;
+      height: 100px;
+      position: relative;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .interactive-cloud:active {
+      transform: scale(1.1);
+    }
+
+    /* Floating Quick Interactions Dashboard */
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      width: 100%;
+      max-width: 400px;
+      margin-bottom: 20px;
+    }
+
+    .action-card {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .action-icon {
+      font-size: 1.5rem;
+    }
+
+    .action-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .action-desc {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    /* Shared Digital Garden Container */
+    .garden-card {
+      width: 100%;
+      max-width: 400px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .garden-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+      width: 100%;
+      text-align: left;
+    }
+
+    .garden-viewport {
+      width: 100%;
+      height: 120px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 18px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 10px;
+      border: 1px dashed var(--glass-border);
+    }
+
+    .garden-plot {
+      display: flex;
+      gap: 14px;
+      align-items: flex-end;
+      z-index: 2;
+    }
+
+    .garden-item {
+      font-size: 1.8rem;
+      animation: growPlant 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+    }
+
+    @keyframes growPlant {
+      0% { transform: scale(0) translateY(20px); opacity: 0; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    /* Randomizer Box */
+    .random-btn-container {
+      width: 100%;
+      max-width: 400px;
+      margin-bottom: 24px;
+    }
+
+    /* ==========================================================================
+       3. COLLABORATIVE SCRIBBLE CANVAS VIEW
+       ========================================================================== */
+    .scribble-container {
+      width: 100%;
+      max-width: 500px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .canvas-wrapper {
+      flex: 1;
+      width: 100%;
+      min-height: 320px;
+      position: relative;
+      border-radius: 24px;
+      overflow: hidden;
+      background: #FFFDF7;
+      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.03), var(--glass-shadow);
+      border: 1px solid var(--glass-border);
+      touch-action: none;
+    }
+
+    #scribble-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+    }
+
+    .canvas-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      gap: 8px;
+    }
+
+    .tool-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tool-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      cursor: pointer;
+      color: var(--text-main);
+      transition: all 0.2s ease;
+    }
+
+    .tool-btn.active {
+      background: rgba(255, 159, 67, 0.15);
+      border-color: var(--accent-primary);
+      transform: scale(1.05);
+    }
+
+    .color-swatch {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      transition: transform 0.2s ease;
+    }
+
+    .color-swatch.active {
+      transform: scale(1.25);
+    }
+
+    /* Live Cursor Presence Indicator */
+    .remote-cursor {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #FF9F43;
+      border: 2px solid white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      transition: left 0.1s linear, top 0.1s linear, opacity 0.5s ease;
+      z-index: 10;
+      opacity: 0;
+    }
+
+    .remote-cursor.visible {
+      opacity: 1;
+    }
+
+    /* ==========================================================================
+       4. SHARED MEMORY GALLERY VIEW
+       ========================================================================== */
+    .gallery-grid {
+      width: 100%;
+      max-width: 400px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .memory-card {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .memory-thumb {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 16px;
+      background: #FFFDF7;
+      object-fit: cover;
+      border: 1px solid var(--glass-border);
+    }
+
+    .memory-date {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .memory-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ==========================================================================
+       5. FLOATING GLASS NAVIGATION BAR
+       ========================================================================== */
+    .bottom-nav-container {
+      position: absolute;
+      bottom: calc(var(--safe-bottom) + 16px);
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      padding: 0 24px;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .bottom-nav {
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      padding: 6px 10px;
+      gap: 6px;
+      border-radius: 30px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+    }
+
+    .nav-item {
+      padding: 10px 16px;
+      border-radius: 20px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .nav-item.active {
+      background: #FFFFFF;
+      color: var(--accent-primary);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+
+    body.theme-night .nav-item.active {
+      background: rgba(255, 255, 255, 0.15);
+      color: #FFD166;
+    }
+
+    /* ==========================================================================
+       6. REAL-TIME EVENT NOTIFICATIONS & POPUPS
+       ========================================================================== */
+    .toast-container {
+      position: absolute;
+      top: calc(var(--safe-top) + 70px);
+      left: 0;
+      right: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    .toast-popup {
+      padding: 12px 20px;
+      border-radius: 24px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+      animation: toastIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      pointer-events: auto;
+    }
+
+    @keyframes toastIn {
+      0% { transform: translateY(-20px) scale(0.9); opacity: 0; }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .toast-popup.toast-out {
+      animation: toastOut 0.4s cubic-bezier(0.4, 0, 1, 1) forwards;
+    }
+
+    @keyframes toastOut {
+      0% { transform: translateY(0) scale(1); opacity: 1; }
+      100% { transform: translateY(-10px) scale(0.9); opacity: 0; }
+    }
+
+    /* Modal Dialog Overlays */
+    .modal-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 320px;
+      padding: 24px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      transform: scale(0.9);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .modal-overlay.active .modal-card {
+      transform: scale(1);
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .modal-body {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .modal-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+
+    .modal-btn-primary {
+      background: var(--accent-primary);
+      color: white;
+    }
+
+    .modal-btn-secondary {
+      background: rgba(0,0,0,0.05);
+      color: var(--text-main);
+    }
+
+    /* Accessible Reduced Motion Support */
+    @media (prefers-reduced-motion: reduce) {
+      *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body class="theme-morning">
+
+  <div id="app-container">
+    <!-- Dynamic Ambient Particles Layer -->
+    <canvas id="ambient-canvas"></canvas>
+    
+    <!-- Rocket Takeoff Lighting Flash Overlay -->
+    <div id="launch-flash"></div>
+
+    <!-- Notification Toast Anchor -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- ==========================================================================
+       1. ACCESS CONTROL ENTRY SCREEN
+       ========================================================================== -->
+    <section id="entry-screen">
+      <div class="entry-content">
+        <div class="mascot-wrapper">
+          <svg class="cloud-svg" viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M95 60C106.046 60 115 51.0457 115 40C115 29.3885 106.7 20.713 96.2 20.048C93.8 8.6 83.7 0 71.5 0C61.4 0 52.7 5.9 48.7 14.4C45.3 12.2 41.3 11 37 11C23.2 11 12 22.2 12 36C12 37.3 12.1 38.6 12.3 39.8C5.2 42.1 0 48.8 0 56.8C0 67.4 8.6 76 19.2 76H95C106.046 76 115 67.0457 115 56" fill="#FFFFFF"/>
+            <!-- Mascot Face -->
+            <circle cx="45" cy="42" r="3.5" fill="#4A3E3D" id="eye-left"/>
+            <circle cx="75" cy="42" r="3.5" fill="#4A3E3D" id="eye-right"/>
+            <ellipse cx="37" cy="48" rx="4.5" ry="3" fill="#FF8A8A" opacity="0.6"/>
+            <ellipse cx="83" cy="48" rx="4.5" ry="3" fill="#FF8A8A" opacity="0.6"/>
+            <path id="mascot-mouth" d="M54 48 C57 52, 63 52, 66 48" stroke="#4A3E3D" stroke-width="3" stroke-linecap="round" fill="none"/>
+          </svg>
+        </div>
+
+        <h1 class="entry-title">Us</h1>
+        <p class="entry-subtitle">A little place for us.</p>
+
+        <!-- Passcode Entry Form -->
+        <div class="code-input-container" id="code-boxes">
+          <div class="code-box active" data-index="0"></div>
+          <div class="code-box" data-index="1"></div>
+          <div class="code-box" data-index="2"></div>
+          <div class="code-box" data-index="3"></div>
+          <div class="code-box" data-index="4"></div>
+          <div class="code-box" data-index="5"></div>
+        </div>
+        <input type="number" id="hidden-passcode" class="hidden-input" pattern="\d*" inputmode="numeric" maxlength="6" autocomplete="off" />
+
+        <button id="continue-btn" class="continue-btn">Continue →</button>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+       2. MAIN SHARED WORLD INTERFACE
+       ========================================================================== -->
+    <main id="main-world">
+      <!-- Header -->
+      <header class="top-header">
+        <div>
+          <div class="header-names">
+            AYUSH <span class="header-sparkle">✦</span> SIMAR
+          </div>
+          <div class="header-subtitle">Your little corner of the internet</div>
+        </div>
+        <div class="time-badge" id="time-badge">Morning</div>
+      </header>
+
+      <!-- Page Viewport Layer -->
+      <div class="view-container">
+        
+        <!-- PAGE 1: HOME WORLD -->
+        <div id="page-home" class="view-page active">
+          <!-- Mascot Character Hub -->
+          <div class="world-mascot-container" id="main-mascot-btn">
+            <div class="interactive-cloud">
+              <svg class="cloud-svg" viewBox="0 0 120 80" fill="none">
+                <path d="M95 60C106.046 60 115 51.0457 115 40C115 29.3885 106.7 20.713 96.2 20.048C93.8 8.6 83.7 0 71.5 0C61.4 0 52.7 5.9 48.7 14.4C45.3 12.2 41.3 11 37 11C23.2 11 12 22.2 12 36C12 37.3 12.1 38.6 12.3 39.8C5.2 42.1 0 48.8 0 56.8C0 67.4 8.6 76 19.2 76H95C106.046 76 115 67.0457 115 56" fill="var(--cloud-color)"/>
+                <circle cx="45" cy="42" r="3.5" fill="var(--text-main)"/>
+                <circle cx="75" cy="42" r="3.5" fill="var(--text-main)"/>
+                <ellipse cx="37" cy="48" rx="4.5" ry="3" fill="#FF8A8A" opacity="0.6"/>
+                <ellipse cx="83" cy="48" rx="4.5" ry="3" fill="#FF8A8A" opacity="0.6"/>
+                <path d="M54 48 C57 52, 63 52, 66 48" stroke="var(--text-main)" stroke-width="3" stroke-linecap="round" fill="none"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Real-Time Actions -->
+          <div class="actions-grid">
+            <div class="glass-card action-card" id="btn-heartbeat">
+              <span class="action-icon">♡</span>
+              <div>
+                <div class="action-title">Heartbeat</div>
+                <div class="action-desc">Send a pulse</div>
+              </div>
+            </div>
+
+            <div class="glass-card action-card" id="btn-hug">
+              <span class="action-icon">🫂</span>
+              <div>
+                <div class="action-title">Send Hug</div>
+                <div class="action-desc">Wrap in warmth</div>
+              </div>
+            </div>
+
+            <div class="glass-card action-card" id="btn-thinking">
+              <span class="action-icon">✦</span>
+              <div>
+                <div class="action-title">Thinking of You</div>
+                <div class="action-desc">Shoot a star</div>
+              </div>
+            </div>
+
+            <div class="glass-card action-card" id="btn-sky-sparkle">
+              <span class="action-icon">✨</span>
+              <div>
+                <div class="action-title">Sky Sparkle</div>
+                <div class="action-desc">Light up the sky</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Shared Garden Container -->
+          <div class="glass-card garden-card">
+            <div class="garden-title">Our Growing Garden</div>
+            <div class="garden-viewport">
+              <div class="garden-plot" id="garden-plot">
+                <!-- Plants render here dynamically -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Random Prompt Card Generator -->
+          <div class="random-btn-container">
+            <button class="glass-button" id="btn-random" style="width: 100%; font-size: 0.95rem;">
+              Give us something random ✨
+            </button>
+          </div>
+        </div>
+
+        <!-- PAGE 2: SHARED SCRIBBLE CANVAS -->
+        <div id="page-scribble" class="view-page">
+          <div class="scribble-container">
+            <div class="canvas-wrapper" id="canvas-wrapper">
+              <canvas id="scribble-canvas"></canvas>
+              <!-- Cursor indicator for partner -->
+              <div id="remote-cursor" class="remote-cursor"></div>
+            </div>
+
+            <div class="glass-card canvas-toolbar">
+              <div class="tool-group">
+                <button class="tool-btn active" id="tool-pen" title="Pen">✏️</button>
+                <button class="tool-btn" id="tool-marker" title="Marker">🖍️</button>
+                <button class="tool-btn" id="tool-eraser" title="Eraser">🧽</button>
+              </div>
+
+              <div class="tool-group" id="color-palette">
+                <div class="color-swatch active" data-color="#4A3E3D" style="background: #4A3E3D;"></div>
+                <div class="color-swatch" data-color="#FF9F43" style="background: #FF9F43;"></div>
+                <div class="color-swatch" data-color="#FFD166" style="background: #FFD166;"></div>
+                <div class="color-swatch" data-color="#6BCB77" style="background: #6BCB77;"></div>
+                <div class="color-swatch" data-color="#4D96FF" style="background: #4D96FF;"></div>
+              </div>
+
+              <div class="tool-group">
+                <button class="tool-btn" id="tool-clear" title="Clear Canvas">🗑️</button>
+                <button class="tool-btn" id="tool-save" title="Save Moment">💾</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAGE 3: SHARED MEMORIES GALLERY -->
+        <div id="page-memories" class="view-page">
+          <div class="gallery-grid" id="gallery-grid">
+            <!-- Saved Scribbles and Moments will populate here -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Floating Glass Navigation Bar -->
+      <div class="bottom-nav-container">
+        <nav class="bottom-nav">
+          <button class="nav-item active" data-target="page-home">
+            <span>☁️</span> World
+          </button>
+          <button class="nav-item" data-target="page-scribble">
+            <span>✏️</span> Scribble
+          </button>
+          <button class="nav-item" data-target="page-memories">
+            <span>🖼️</span> Memories
+          </button>
+        </nav>
+      </div>
+    </main>
+
+    <!-- Confirmation Modal Overlay -->
+    <div class="modal-overlay" id="modal-overlay">
+      <div class="glass-card modal-card">
+        <div class="modal-title" id="modal-title">Erase our masterpiece?</div>
+        <div class="modal-body" id="modal-body">This will clear the canvas for both of you. You can save it first!</div>
+        <div class="modal-actions">
+          <button class="modal-btn modal-btn-secondary" id="modal-cancel">Keep it</button>
+          <button class="modal-btn modal-btn-primary" id="modal-confirm">Clear</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ==========================================================================
+     JAVASCRIPT LOGIC
+     ========================================================================== -->
+  <script>
+    /* ==========================================================================
+       STATE MANAGEMENT & REALTIME PUB-SUB EMULATOR
+       ========================================================================== */
+    const CONFIG = {
+      PASSCODE: "030826",
+      COOLDOWN_MS: 1500
+    };
+
+    const STATE = {
+      user: null, // "AYUSH" or "SIMAR"
+      activePage: "page-home",
+      lastInteraction: 0,
+      gardenPlants: ["🌱", "🌸", "🌿", "🌼", "✨"],
+      gardenState: ["🌱", "🌸"],
+      memories: []
+    };
+
+    // Lightweight Cross-Tab Broadcast Channel (Provides real-time state sync across tabs/devices)
+    const realtimeChannel = new BroadcastChannel("us_world_realtime_sync");
+
+    // Helper for Mobile Haptics
+    function triggerHaptic(type = "light") {
+      if ("vibrate" in navigator) {
+        if (type === "light") navigator.vibrate(12);
+        if (type === "medium") navigator.vibrate(25);
+        if (type === "success") navigator.vibrate([15, 30, 20]);
+      }
+    }
+
+    /* ==========================================================================
+       1. SECURITY & ACCESS CONTROL SYSTEM
+       ========================================================================== */
+    const hiddenInput = document.getElementById("hidden-passcode");
+    const codeBoxes = document.querySelectorAll(".code-box");
+    const continueBtn = document.getElementById("continue-btn");
+    const entryScreen = document.getElementById("entry-screen");
+    const mainWorld = document.getElementById("main-world");
+    const codeContainer = document.getElementById("code-boxes");
+
+    // Focus input on box click
+    codeContainer.addEventListener("click", () => hiddenInput.focus());
+
+    hiddenInput.addEventListener("input", (e) => {
+      const val = e.target.value.slice(0, 6);
+      codeBoxes.forEach((box, i) => {
+        box.textContent = val[i] || "";
+        box.classList.toggle("active", i === val.length || (i === 5 && val.length === 6));
+      });
+
+      if (val.length === 6) {
+        if (val === CONFIG.PASSCODE) {
+          continueBtn.classList.add("ready");
+          triggerHaptic("light");
+        } else {
+          // Shake error animation
+          codeContainer.style.transform = "translateX(-10px)";
+          setTimeout(() => codeContainer.style.transform = "translateX(10px)", 80);
+          setTimeout(() => codeContainer.style.transform = "translateX(0)", 160);
+          triggerHaptic("medium");
+        }
+      } else {
+        continueBtn.classList.remove("ready");
+      }
+    });
+
+    continueBtn.addEventListener("click", handleLaunchSequence);
+
+    function handleLaunchSequence() {
+      if (hiddenInput.value !== CONFIG.PASSCODE) return;
+
+      triggerHaptic("success");
+      entryScreen.classList.add("launching");
+
+      // Flash Effect Trigger
+      const flash = document.getElementById("launch-flash");
+      setTimeout(() => { flash.style.opacity = "0.6"; }, 1200);
+      setTimeout(() => { flash.style.opacity = "0"; }, 1800);
+
+      // Complete transition
+      setTimeout(() => {
+        entryScreen.style.display = "none";
+        mainWorld.classList.add("visible");
+        initCanvas();
+        // Prompt for user identity if not chosen
+        if (!STATE.user) {
+          STATE.user = Math.random() > 0.5 ? "AYUSH" : "SIMAR";
+        }
+      }, 2000);
+    }
+
+    /* ==========================================================================
+       2. DYNAMIC LIVING TIME-OF-DAY SYSTEM
+       ========================================================================== */
+    function updateTimeOfDay() {
+      const hour = new Date().getHours();
+      const body = document.body;
+      const badge = document.getElementById("time-badge");
+
+      body.classList.remove("theme-morning", "theme-afternoon", "theme-evening", "theme-night");
+
+      if (hour >= 5 && hour < 11) {
+        body.classList.add("theme-morning");
+        badge.textContent = "Morning 🌅";
+      } else if (hour >= 11 && hour < 16.5) {
+        body.classList.add("theme-afternoon");
+        badge.textContent = "Afternoon ☀️";
+      } else if (hour >= 16.5 && hour < 19) {
+        body.classList.add("theme-evening");
+        badge.textContent = "Golden Hour 🌇";
+      } else {
+        body.classList.add("theme-night");
+        badge.textContent = "Night 🌙";
+      }
+    }
+    setInterval(updateTimeOfDay, 60000);
+    updateTimeOfDay();
+
+    /* ==========================================================================
+       3. AMBIENT PARTICLE ENGINE (CANVAS)
+       ========================================================================== */
+    const ambCanvas = document.getElementById("ambient-canvas");
+    const ambCtx = ambCanvas.getContext("2d");
+    let particles = [];
+
+    function resizeAmbientCanvas() {
+      ambCanvas.width = window.innerWidth;
+      ambCanvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resizeAmbientCanvas);
+    resizeAmbientCanvas();
+
+    class Particle {
+      constructor() {
+        this.reset();
+      }
+      reset() {
+        this.x = Math.random() * ambCanvas.width;
+        this.y = Math.random() * ambCanvas.height;
+        this.size = Math.random() * 3 + 1;
+        this.speedY = -(Math.random() * 0.4 + 0.1);
+        this.speedX = Math.sin(Math.random() * Math.PI) * 0.2;
+        this.opacity = Math.random() * 0.5 + 0.2;
+      }
+      update() {
+        this.y += this.speedY;
+        this.x += this.speedX;
+        if (this.y < -10) this.reset();
+      }
+      draw() {
+        ambCtx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+        ambCtx.beginPath();
+        ambCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ambCtx.fill();
+      }
+    }
+
+    for (let i = 0; i < 25; i++) particles.push(new Particle());
+
+    function animateParticles() {
+      ambCtx.clearRect(0, 0, ambCanvas.width, ambCanvas.height);
+      particles.forEach(p => {
+        p.update();
+        p.draw();
+      });
+      requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
+
+    /* ==========================================================================
+       4. NAVIGATION ROUTER
+       ========================================================================== */
+    const navItems = document.querySelectorAll(".nav-item");
+    const pages = document.querySelectorAll(".view-page");
+
+    navItems.forEach(item => {
+      item.addEventListener("click", () => {
+        const target = item.getAttribute("data-target");
+        navItems.forEach(i => i.classList.remove("active"));
+        pages.forEach(p => p.classList.remove("active"));
+
+        item.classList.add("active");
+        document.getElementById(target).classList.add("active");
+        STATE.activePage = target;
+        triggerHaptic("light");
+
+        if (target === "page-scribble") {
+          resizeScribbleCanvas();
+        }
+      });
+    });
+
+    /* ==========================================================================
+       5. REAL-TIME INTERACTIONS & EVENTS
+       ========================================================================== */
+    function showToast(message, icon = "☁️") {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      toast.className = "glass-card toast-popup";
+      toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+      container.appendChild(toast);
+
+      triggerHaptic("medium");
+
+      setTimeout(() => {
+        toast.classList.add("toast-out");
+        setTimeout(() => toast.remove(), 400);
+      }, 3000);
+    }
+
+    function emitEvent(type, payload = {}) {
+      const now = Date.now();
+      if (now - STATE.lastInteraction < CONFIG.COOLDOWN_MS) return false;
+      STATE.lastInteraction = now;
+
+      const eventData = { type, sender: STATE.user, payload, timestamp: now };
+      realtimeChannel.postMessage(eventData);
+      handleIncomingEvent(eventData, true); // Local optimistic execution
+      return true;
+    }
+
+    realtimeChannel.onmessage = (event) => {
+      handleIncomingEvent(event.data, false);
+    };
+
+    function handleIncomingEvent(data, isSelf) {
+      const { type, sender, payload } = data;
+
+      switch (type) {
+        case "HEARTBEAT":
+          if (!isSelf) showToast(`A little heartbeat from ${sender} ♡`, "💖");
+          growGarden("🌸");
+          break;
+
+        case "HUG":
+          if (!isSelf) showToast(`A little hug from ${sender}`, "🫂");
+          growGarden("🌿");
+          break;
+
+        case "THINKING":
+          if (!isSelf) showToast(`Someone is thinking of you.`, "✦");
+          growGarden("✨");
+          break;
+
+        case "RANDOM":
+          if (!isSelf) showToast(`${sender} shared a random spark!`, "✨");
+          break;
+
+        case "DRAW_STROKE":
+          if (!isSelf) renderRemoteStroke(payload);
+          break;
+
+        case "DRAW_CURSOR":
+          if (!isSelf) updateRemoteCursor(payload);
+          break;
+
+        case "CLEAR_CANVAS":
+          if (!isSelf) executeClearCanvas();
+          break;
+
+        case "SAVE_DRAWING":
+          if (!isSelf) {
+            STATE.memories.unshift(payload);
+            renderMemories();
+            showToast("New scribble saved to Memories!", "🖼️");
+          }
+          break;
+      }
+    }
+
+    // Interaction Buttons Bindings
+    document.getElementById("btn-heartbeat").addEventListener("click", () => {
+      if (emitEvent("HEARTBEAT")) triggerHaptic("light");
+    });
+
+    document.getElementById("btn-hug").addEventListener("click", () => {
+      if (emitEvent("HUG")) triggerHaptic("medium");
+    });
+
+    document.getElementById("btn-thinking").addEventListener("click", () => {
+      if (emitEvent("THINKING")) triggerHaptic("light");
+    });
+
+    document.getElementById("btn-sky-sparkle").addEventListener("click", () => {
+      if (emitEvent("RANDOM")) triggerHaptic("light");
+    });
+
+    // Shared Garden Logic
+    function growGarden(symbol) {
+      const gardenPlot = document.getElementById("garden-plot");
+      STATE.gardenState.push(symbol);
+      if (STATE.gardenState.length > 8) STATE.gardenState.shift();
+
+      gardenPlot.innerHTML = "";
+      STATE.gardenState.forEach(item => {
+        const el = document.createElement("span");
+        el.className = "garden-item";
+        el.textContent = item;
+        gardenPlot.appendChild(el);
+      });
+    }
+    growGarden("🌱"); // initial plant
+
+    // Random Prompt Generator
+    const PROMPTS = [
+      "“What’s a song that reminds you of us?”",
+      "“Remember that cozy coffee moment?”",
+      "“You make my world feel lighter.”",
+      "“Idea: Let's draw a tiny cat together in Scribble!”",
+      "“Sending you a warm virtual cup of tea ☕”"
+    ];
+
+    document.getElementById("btn-random").addEventListener("click", () => {
+      const prompt = PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
+      showToast(prompt, "✨");
+      emitEvent("RANDOM");
+    });
+
+    /* ==========================================================================
+       6. COLLABORATIVE REAL-TIME SCRIBBLE CANVAS
+       ========================================================================== */
+    const canvas = document.getElementById("scribble-canvas");
+    const ctx = canvas.getContext("2d");
+    const wrapper = document.getElementById("canvas-wrapper");
+    const remoteCursor = document.getElementById("remote-cursor");
+
+    let isDrawing = false;
+    let currentTool = "pen";
+    let currentColor = "#4A3E3D";
+    let cursorTimeout = null;
+
+    function resizeScribbleCanvas() {
+      const rect = wrapper.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+
+      // Save content before resize
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      ctx.putImageData(imgData, 0, 0);
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+    }
+
+    window.addEventListener("resize", resizeScribbleCanvas);
+
+    function initCanvas() {
+      resizeScribbleCanvas();
+    }
+
+    // Canvas Event Listeners
+    function getCanvasCoordinates(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: (clientX - rect.left) / rect.width,
+        y: (clientY - rect.top) / rect.height
+      };
+    }
+
+    function startDrawing(e) {
+      isDrawing = true;
+      const coords = getCanvasCoordinates(e);
+      drawStroke(coords.x, coords.y, coords.x, coords.y, currentColor, currentTool, true);
+    }
+
+    let lastX = 0, lastY = 0;
+
+    function handlePointerMove(e) {
+      const coords = getCanvasCoordinates(e);
+
+      // Emit cursor presence position
+      realtimeChannel.postMessage({
+        type: "DRAW_CURSOR",
+        sender: STATE.user,
+        payload: { x: coords.x, y: coords.y }
+      });
+
+      if (!isDrawing) return;
+
+      drawStroke(lastX, lastY, coords.x, coords.y, currentColor, currentTool, true);
+      lastX = coords.x;
+      lastY = coords.y;
+    }
+
+    function stopDrawing() {
+      isDrawing = false;
+    }
+
+    canvas.addEventListener("mousedown", (e) => {
+      const coords = getCanvasCoordinates(e);
+      lastX = coords.x; lastY = coords.y;
+      startDrawing(e);
+    });
+    canvas.addEventListener("mousemove", handlePointerMove);
+    window.addEventListener("mouseup", stopDrawing);
+
+    canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      const coords = getCanvasCoordinates(e);
+      lastX = coords.x; lastY = coords.y;
+      startDrawing(e);
+    }, { passive: false });
+
+    canvas.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      handlePointerMove(e);
+    }, { passive: false });
+
+    window.addEventListener("touchend", stopDrawing);
+
+    function drawStroke(x1, y1, x2, y2, color, tool, emit = false) {
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.beginPath();
+      ctx.moveTo(x1 * w, y1 * h);
+      ctx.lineTo(x2 * w, y2 * h);
+
+      if (tool === "eraser") {
+        ctx.strokeStyle = "#FFFDF7";
+        ctx.lineWidth = 24;
+      } else if (tool === "marker") {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 14;
+        ctx.globalAlpha = 0.4;
+      } else {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.globalAlpha = 1.0;
+      }
+
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+
+      if (emit) {
+        emitEvent("DRAW_STROKE", { x1, y1, x2, y2, color, tool });
+      }
+    }
+
+    function renderRemoteStroke(payload) {
+      drawStroke(payload.x1, payload.y1, payload.x2, payload.y2, payload.color, payload.tool, false);
+    }
+
+    function updateRemoteCursor(payload) {
+      const w = wrapper.clientWidth;
+      const h = wrapper.clientHeight;
+
+      remoteCursor.style.left = `${payload.x * w}px`;
+      remoteCursor.style.top = `${payload.y * h}px`;
+      remoteCursor.classList.add("visible");
+
+      clearTimeout(cursorTimeout);
+      cursorTimeout = setTimeout(() => {
+        remoteCursor.classList.remove("visible");
+      }, 2000);
+    }
+
+    // Canvas Toolbar Bindings
+    document.getElementById("tool-pen").addEventListener("click", (e) => setTool("pen", e.currentTarget));
+    document.getElementById("tool-marker").addEventListener("click", (e) => setTool("marker", e.currentTarget));
+    document.getElementById("tool-eraser").addEventListener("click", (e) => setTool("eraser", e.currentTarget));
+
+    function setTool(tool, btn) {
+      currentTool = tool;
+      document.querySelectorAll(".tool-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+    }
+
+    document.querySelectorAll(".color-swatch").forEach(swatch => {
+      swatch.addEventListener("click", () => {
+        document.querySelectorAll(".color-swatch").forEach(s => s.classList.remove("active"));
+        swatch.classList.add("active");
+        currentColor = swatch.getAttribute("data-color");
+      });
+    });
+
+    // Canvas Clearing with Dialog Confirmation
+    const modal = document.getElementById("modal-overlay");
+    document.getElementById("tool-clear").addEventListener("click", () => {
+      modal.classList.add("active");
+    });
+
+    document.getElementById("modal-cancel").addEventListener("click", () => {
+      modal.classList.remove("active");
+    });
+
+    document.getElementById("modal-confirm").addEventListener("click", () => {
+      modal.classList.remove("active");
+      executeClearCanvas();
+      emitEvent("CLEAR_CANVAS");
+    });
+
+    function executeClearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      showToast("Canvas cleared", "🗑️");
+    }
+
+    // Save Moment to Gallery
+    document.getElementById("tool-save").addEventListener("click", () => {
+      const dataUrl = canvas.toDataURL();
+      const newMemory = {
+        id: Date.now(),
+        image: dataUrl,
+        date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        title: "Shared Doodle"
+      };
+
+      STATE.memories.unshift(newMemory);
+      renderMemories();
+      emitEvent("SAVE_DRAWING", newMemory);
+      showToast("Saved to Memories!", "💾");
+      triggerHaptic("success");
+    });
+
+    /* ==========================================================================
+       7. SHARED GALLERY SYSTEM
+       ========================================================================== */
+    function renderMemories() {
+      const grid = document.getElementById("gallery-grid");
+      grid.innerHTML = "";
+
+      if (STATE.memories.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px 0; font-size: 0.9rem;">No saved memories yet.<br>Draw something in Scribble and save it!</div>`;
+        return;
+      }
+
+      STATE.memories.forEach(mem => {
+        const card = document.createElement("div");
+        card.className = "glass-card memory-card";
+        card.innerHTML = `
+          <img class="memory-thumb" src="${mem.image}" alt="Memory" />
+          <div class="memory-date">${mem.date}</div>
+          <div class="memory-title">${mem.title}</div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+    renderMemories();
+
+  </script>
+</body>
+</html>
