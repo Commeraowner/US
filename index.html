@@ -6,72 +6,29 @@
   <title>Us — A Little World</title>
   <style>
     /* ==========================================================================
-       CSS VARIABLES & BASE STYLES
+       CSS VARIABLES & CONTINUOUS TIME INTERPOLATION SYSTEM
        ========================================================================== */
     :root {
-      /* Theme Interpolation Variables (Dynamic Time of Day) */
-      --bg-gradient-top: #FFF4D6;
-      --bg-gradient-bottom: #FFFDF7;
+      /* Smoothly Interpolated Theme Variables (Updated via JS continuous cycle) */
+      --bg-sky-top: #FFE7A8;
+      --bg-sky-bottom: #FFFDF7;
       --accent-primary: #FF9F43;
       --accent-secondary: #FFB84D;
       --accent-glow: rgba(255, 159, 67, 0.35);
-      --glass-bg: rgba(255, 255, 255, 0.55);
-      --glass-border: rgba(255, 255, 255, 0.7);
+      
+      --glass-bg: rgba(255, 255, 255, 0.62);
+      --glass-border: rgba(255, 255, 255, 0.75);
       --glass-shadow: 0 8px 32px 0 rgba(255, 159, 67, 0.08);
+      
       --text-main: #4A3E3D;
       --text-muted: #8C7A78;
-      --cloud-color: #FFFFFF;
+      --cloud-fill: #FFFFFF;
+      --cloud-shadow: rgba(255, 159, 67, 0.18);
+      
+      --canvas-bg: #FFFDF7;
       --sky-element-opacity: 0.8;
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
-      
-      /* Standard Palette */
-      --color-orange: #FF9F43;
-      --color-tangerine: #FFB84D;
-      --color-yellow: #FFD166;
-      --color-cream: #FFFDF7;
-    }
-
-    /* Time-of-day Theme Overrides */
-    body.theme-morning {
-      --bg-gradient-top: #FFE7A8;
-      --bg-gradient-bottom: #FFFDF7;
-      --accent-primary: #FFB84D;
-      --accent-glow: rgba(255, 184, 77, 0.3);
-      --glass-bg: rgba(255, 255, 255, 0.65);
-      --text-main: #3D3535;
-    }
-
-    body.theme-afternoon {
-      --bg-gradient-top: #FFD166;
-      --bg-gradient-bottom: #FFF4D6;
-      --accent-primary: #FF9F43;
-      --accent-glow: rgba(255, 159, 67, 0.35);
-      --glass-bg: rgba(255, 255, 255, 0.6);
-      --text-main: #403028;
-    }
-
-    body.theme-evening {
-      --bg-gradient-top: #FF9F43;
-      --bg-gradient-bottom: #FFE7A8;
-      --accent-primary: #E65100;
-      --accent-glow: rgba(230, 81, 0, 0.3);
-      --glass-bg: rgba(255, 248, 240, 0.55);
-      --text-main: #2C1810;
-    }
-
-    body.theme-night {
-      --bg-gradient-top: #1A1C29;
-      --bg-gradient-bottom: #0D0E15;
-      --accent-primary: #FFD166;
-      --accent-glow: rgba(255, 209, 102, 0.25);
-      --glass-bg: rgba(30, 34, 53, 0.55);
-      --glass-border: rgba(255, 255, 255, 0.12);
-      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-      --text-main: #F0E6D2;
-      --text-muted: #A09BB0;
-      --cloud-color: #2A2E45;
-      --sky-element-opacity: 0.3;
     }
 
     * {
@@ -97,14 +54,14 @@
       width: 100%;
       height: 100%;
       position: relative;
-      background: linear-gradient(180deg, var(--bg-gradient-top) 0%, var(--bg-gradient-bottom) 100%);
-      transition: background 3s ease-in-out;
+      background: linear-gradient(180deg, var(--bg-sky-top) 0%, var(--bg-sky-bottom) 100%);
+      transition: background 1.5s ease;
       overflow: hidden;
       display: flex;
       flex-direction: column;
     }
 
-    /* Ambient Dynamic Background Particle Canvas */
+    /* Dynamic Sky Particle Canvas (Stars, Sunset Dust, Sunbeams) */
     #ambient-canvas {
       position: absolute;
       top: 0;
@@ -115,6 +72,34 @@
       z-index: 1;
     }
 
+    /* Floating Sky Elements (Moon / Shooting Stars container) */
+    #celestial-elements {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      overflow: hidden;
+    }
+
+    .moon-element {
+      position: absolute;
+      top: 10%;
+      right: 12%;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: #FFFDF7;
+      box-shadow: 0 0 20px rgba(255, 230, 180, 0.5), inset -8px -2px 0 0 rgba(220, 210, 190, 0.3);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 2s ease, transform 2s ease;
+    }
+
+    .moon-element.visible {
+      opacity: 0.85;
+      transform: translateY(0);
+    }
+
     /* Reusable Glass Effect */
     .glass-card {
       background: var(--glass-bg);
@@ -123,7 +108,7 @@
       border: 1px solid var(--glass-border);
       box-shadow: var(--glass-shadow);
       border-radius: 28px;
-      transition: background 0.5s ease, border 0.5s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: background 1s ease, border 1s ease, box-shadow 1s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     .glass-button {
@@ -143,7 +128,7 @@
       justify-content: center;
       gap: 8px;
       outline: none;
-      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease, box-shadow 0.3s ease;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 1s ease, box-shadow 1s ease;
     }
 
     .glass-button:active {
@@ -162,7 +147,7 @@
       align-items: center;
       justify-content: center;
       padding: 24px;
-      background: linear-gradient(180deg, #FFE7A8 0%, #FFFDF7 100%);
+      background: linear-gradient(180deg, var(--bg-sky-top) 0%, var(--bg-sky-bottom) 100%);
       transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
@@ -187,8 +172,13 @@
     .cloud-svg {
       width: 100%;
       height: 100%;
-      filter: drop-shadow(0 12px 24px rgba(255, 159, 67, 0.18));
+      filter: drop-shadow(0 12px 24px var(--cloud-shadow));
       animation: floatMascot 4s ease-in-out infinite;
+      transition: filter 1s ease;
+    }
+
+    .cloud-svg path {
+      transition: fill 1s ease;
     }
 
     @keyframes floatMascot {
@@ -199,14 +189,14 @@
     .entry-title {
       font-size: 1.5rem;
       font-weight: 700;
-      color: #4A3E3D;
+      color: var(--text-main);
       margin-bottom: 6px;
       letter-spacing: -0.02em;
     }
 
     .entry-subtitle {
       font-size: 0.95rem;
-      color: #8C7A78;
+      color: var(--text-muted);
       margin-bottom: 32px;
     }
 
@@ -220,23 +210,22 @@
       width: 44px;
       height: 54px;
       border-radius: 14px;
-      background: rgba(255, 255, 255, 0.8);
-      border: 1.5px solid rgba(255, 159, 67, 0.3);
+      background: var(--glass-bg);
+      border: 1.5px solid var(--accent-glow);
       backdrop-filter: blur(10px);
       font-size: 1.4rem;
       font-weight: 700;
-      color: #FF9F43;
+      color: var(--accent-primary);
       text-align: center;
       line-height: 54px;
       transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-      box-shadow: 0 4px 12px rgba(255, 159, 67, 0.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
     }
 
     .code-box.active {
-      border-color: #FF9F43;
+      border-color: var(--accent-primary);
       transform: scale(1.05);
-      box-shadow: 0 6px 16px rgba(255, 159, 67, 0.2);
-      background: #FFFFFF;
+      box-shadow: 0 6px 16px var(--accent-glow);
     }
 
     .hidden-input {
@@ -251,10 +240,10 @@
       padding: 16px;
       font-size: 1rem;
       border-radius: 20px;
-      background: linear-gradient(135deg, #FF9F43 0%, #FFB84D 100%);
+      background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
       color: white;
       border: none;
-      box-shadow: 0 10px 24px rgba(255, 159, 67, 0.35);
+      box-shadow: 0 10px 24px var(--accent-glow);
       font-weight: 600;
       cursor: pointer;
       opacity: 0.5;
@@ -293,7 +282,7 @@
     #launch-flash {
       position: absolute;
       inset: 0;
-      background: radial-gradient(circle, #FFF4D6 0%, #FF9F43 100%);
+      background: radial-gradient(circle, #FFF4D6 0%, var(--accent-primary) 100%);
       opacity: 0;
       pointer-events: none;
       z-index: 99;
@@ -366,6 +355,7 @@
       background: var(--glass-bg);
       border: 1px solid var(--glass-border);
       color: var(--text-main);
+      transition: background 1s ease, border 1s ease;
     }
 
     /* Main Content Viewport */
@@ -400,7 +390,7 @@
 
     /* Mascot Display Centerpiece */
     .world-mascot-container {
-      margin: 12px 0 20px 0;
+      margin: 8px 0 16px 0;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -416,6 +406,26 @@
 
     .interactive-cloud:active {
       transform: scale(1.1);
+    }
+
+    .mascot-speech-bubble {
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 14px;
+      margin-top: 4px;
+      color: var(--text-main);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .mascot-speech-bubble.visible {
+      opacity: 1;
+      transform: translateY(0);
     }
 
     /* Floating Quick Interactions Dashboard */
@@ -476,8 +486,8 @@
 
     .garden-viewport {
       width: 100%;
-      height: 120px;
-      background: rgba(255, 255, 255, 0.2);
+      height: 110px;
+      background: rgba(255, 255, 255, 0.15);
       border-radius: 18px;
       position: relative;
       overflow: hidden;
@@ -532,7 +542,7 @@
       position: relative;
       border-radius: 24px;
       overflow: hidden;
-      background: #FFFDF7;
+      background: var(--canvas-bg);
       box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.03), var(--glass-shadow);
       border: 1px solid var(--glass-border);
       touch-action: none;
@@ -551,6 +561,7 @@
       justify-content: space-between;
       padding: 10px 14px;
       gap: 8px;
+      flex-wrap: wrap;
     }
 
     .tool-group {
@@ -560,29 +571,29 @@
     }
 
     .tool-btn {
-      width: 38px;
-      height: 38px;
+      width: 36px;
+      height: 36px;
       border-radius: 12px;
       border: 1px solid transparent;
       background: transparent;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       cursor: pointer;
       color: var(--text-main);
       transition: all 0.2s ease;
     }
 
     .tool-btn.active {
-      background: rgba(255, 159, 67, 0.15);
+      background: rgba(255, 159, 67, 0.2);
       border-color: var(--accent-primary);
       transform: scale(1.05);
     }
 
     .color-swatch {
-      width: 24px;
-      height: 24px;
+      width: 22px;
+      height: 22px;
       border-radius: 50%;
       cursor: pointer;
       border: 2px solid white;
@@ -597,21 +608,51 @@
     /* Live Cursor Presence Indicator */
     .remote-cursor {
       position: absolute;
-      width: 12px;
-      height: 12px;
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
-      background: #FF9F43;
+      background: var(--accent-primary);
       border: 2px solid white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
       pointer-events: none;
       transform: translate(-50%, -50%);
-      transition: left 0.1s linear, top 0.1s linear, opacity 0.5s ease;
+      transition: left 0.08s linear, top 0.08s linear, opacity 0.4s ease;
       z-index: 10;
       opacity: 0;
     }
 
+    .remote-cursor::after {
+      content: attr(data-label);
+      position: absolute;
+      top: 14px;
+      left: 10px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 8px;
+      background: var(--glass-bg);
+      color: var(--text-main);
+      border: 1px solid var(--glass-border);
+      white-space: nowrap;
+    }
+
     .remote-cursor.visible {
       opacity: 1;
+    }
+
+    /* Canvas Reaction Elements */
+    .stroke-sparkle {
+      position: absolute;
+      pointer-events: none;
+      font-size: 1.1rem;
+      animation: popSparkle 0.8s ease-out forwards;
+      z-index: 8;
+    }
+
+    @keyframes popSparkle {
+      0% { transform: scale(0) translate(-50%, -50%); opacity: 1; }
+      50% { transform: scale(1.3) translate(-50%, -70%); opacity: 0.9; }
+      100% { transform: scale(0.8) translate(-50%, -100%); opacity: 0; }
     }
 
     /* ==========================================================================
@@ -637,7 +678,7 @@
       width: 100%;
       aspect-ratio: 1;
       border-radius: 16px;
-      background: #FFFDF7;
+      background: var(--canvas-bg);
       object-fit: cover;
       border: 1px solid var(--glass-border);
     }
@@ -684,6 +725,7 @@
       -webkit-backdrop-filter: blur(24px);
       border: 1px solid var(--glass-border);
       box-shadow: var(--glass-shadow);
+      transition: background 1s ease, border 1s ease;
     }
 
     .nav-item {
@@ -702,14 +744,9 @@
     }
 
     .nav-item.active {
-      background: #FFFFFF;
+      background: var(--glass-bg);
       color: var(--accent-primary);
       box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    }
-
-    body.theme-night .nav-item.active {
-      background: rgba(255, 255, 255, 0.15);
-      color: #FFD166;
     }
 
     /* ==========================================================================
@@ -809,12 +846,13 @@
 
     .modal-actions {
       display: flex;
-      gap: 10px;
+      flex-direction: column;
+      gap: 8px;
       width: 100%;
     }
 
     .modal-btn {
-      flex: 1;
+      width: 100%;
       padding: 12px;
       border-radius: 16px;
       font-size: 0.9rem;
@@ -844,12 +882,17 @@
     }
   </style>
 </head>
-<body class="theme-morning">
+<body>
 
   <div id="app-container">
     <!-- Dynamic Ambient Particles Layer -->
     <canvas id="ambient-canvas"></canvas>
     
+    <!-- Sky Celestial Objects -->
+    <div id="celestial-elements">
+      <div id="moon-element" class="moon-element"></div>
+    </div>
+
     <!-- Rocket Takeoff Lighting Flash Overlay -->
     <div id="launch-flash"></div>
 
@@ -863,13 +906,13 @@
       <div class="entry-content">
         <div class="mascot-wrapper">
           <svg class="cloud-svg" viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M95 60C106.046 60 115 51.0457 115 40C115 29.3885 106.7 20.713 96.2 20.048C93.8 8.6 83.7 0 71.5 0C61.4 0 52.7 5.9 48.7 14.4C45.3 12.2 41.3 11 37 11C23.2 11 12 22.2 12 36C12 37.3 12.1 38.6 12.3 39.8C5.2 42.1 0 48.8 0 56.8C0 67.4 8.6 76 19.2 76H95C106.046 76 115 67.0457 115 56" fill="#FFFFFF"/>
+            <path d="M95 60C106.046 60 115 51.0457 115 40C115 29.3885 106.7 20.713 96.2 20.048C93.8 8.6 83.7 0 71.5 0C61.4 0 52.7 5.9 48.7 14.4C45.3 12.2 41.3 11 37 11C23.2 11 12 22.2 12 36C12 37.3 12.1 38.6 12.3 39.8C5.2 42.1 0 48.8 0 56.8C0 67.4 8.6 76 19.2 76H95C106.046 76 115 67.0457 115 56" fill="var(--cloud-fill)"/>
             <!-- Mascot Face -->
-            <circle cx="45" cy="42" r="3.5" fill="#4A3E3D" id="eye-left"/>
-            <circle cx="75" cy="42" r="3.5" fill="#4A3E3D" id="eye-right"/>
+            <circle cx="45" cy="42" r="3.5" fill="var(--text-main)" id="eye-left-entry"/>
+            <circle cx="75" cy="42" r="3.5" fill="var(--text-main)" id="eye-right-entry"/>
             <ellipse cx="37" cy="48" rx="4.5" ry="3" fill="#FF8A8A" opacity="0.6"/>
             <ellipse cx="83" cy="48" rx="4.5" ry="3" fill="#FF8A8A" opacity="0.6"/>
-            <path id="mascot-mouth" d="M54 48 C57 52, 63 52, 66 48" stroke="#4A3E3D" stroke-width="3" stroke-linecap="round" fill="none"/>
+            <path id="mascot-mouth-entry" d="M54 48 C57 52, 63 52, 66 48" stroke="var(--text-main)" stroke-width="3" stroke-linecap="round" fill="none"/>
           </svg>
         </div>
 
@@ -915,14 +958,16 @@
           <div class="world-mascot-container" id="main-mascot-btn">
             <div class="interactive-cloud">
               <svg class="cloud-svg" viewBox="0 0 120 80" fill="none">
-                <path d="M95 60C106.046 60 115 51.0457 115 40C115 29.3885 106.7 20.713 96.2 20.048C93.8 8.6 83.7 0 71.5 0C61.4 0 52.7 5.9 48.7 14.4C45.3 12.2 41.3 11 37 11C23.2 11 12 22.2 12 36C12 37.3 12.1 38.6 12.3 39.8C5.2 42.1 0 48.8 0 56.8C0 67.4 8.6 76 19.2 76H95C106.046 76 115 67.0457 115 56" fill="var(--cloud-color)"/>
-                <circle cx="45" cy="42" r="3.5" fill="var(--text-main)"/>
-                <circle cx="75" cy="42" r="3.5" fill="var(--text-main)"/>
+                <path d="M95 60C106.046 60 115 51.0457 115 40C115 29.3885 106.7 20.713 96.2 20.048C93.8 8.6 83.7 0 71.5 0C61.4 0 52.7 5.9 48.7 14.4C45.3 12.2 41.3 11 37 11C23.2 11 12 22.2 12 36C12 37.3 12.1 38.6 12.3 39.8C5.2 42.1 0 48.8 0 56.8C0 67.4 8.6 76 19.2 76H95C106.046 76 115 67.0457 115 56" fill="var(--cloud-fill)"/>
+                <!-- Mascot Face Elements -->
+                <circle cx="45" cy="42" r="3.5" fill="var(--text-main)" id="mascot-eye-l"/>
+                <circle cx="75" cy="42" r="3.5" fill="var(--text-main)" id="mascot-eye-r"/>
                 <ellipse cx="37" cy="48" rx="4.5" ry="3" fill="#FF8A8A" opacity="0.6"/>
                 <ellipse cx="83" cy="48" rx="4.5" ry="3" fill="#FF8A8A" opacity="0.6"/>
-                <path d="M54 48 C57 52, 63 52, 66 48" stroke="var(--text-main)" stroke-width="3" stroke-linecap="round" fill="none"/>
+                <path id="mascot-mouth" d="M54 48 C57 52, 63 52, 66 48" stroke="var(--text-main)" stroke-width="3" stroke-linecap="round" fill="none"/>
               </svg>
             </div>
+            <div class="mascot-speech-bubble" id="mascot-bubble">let's doodle ☁️</div>
           </div>
 
           <!-- Real-Time Actions -->
@@ -984,7 +1029,7 @@
             <div class="canvas-wrapper" id="canvas-wrapper">
               <canvas id="scribble-canvas"></canvas>
               <!-- Cursor indicator for partner -->
-              <div id="remote-cursor" class="remote-cursor"></div>
+              <div id="remote-cursor" class="remote-cursor" data-label="Simar"></div>
             </div>
 
             <div class="glass-card canvas-toolbar">
@@ -1003,6 +1048,8 @@
               </div>
 
               <div class="tool-group">
+                <button class="tool-btn" id="tool-undo" title="Undo">↩️</button>
+                <button class="tool-btn" id="tool-redo" title="Redo">↪️</button>
                 <button class="tool-btn" id="tool-clear" title="Clear Canvas">🗑️</button>
                 <button class="tool-btn" id="tool-save" title="Save Moment">💾</button>
               </div>
@@ -1041,8 +1088,9 @@
         <div class="modal-title" id="modal-title">Erase our masterpiece?</div>
         <div class="modal-body" id="modal-body">This will clear the canvas for both of you. You can save it first!</div>
         <div class="modal-actions">
+          <button class="modal-btn modal-btn-primary" id="modal-save-first">Save first 💾</button>
+          <button class="modal-btn modal-btn-secondary" id="modal-confirm">Clear 🗑️</button>
           <button class="modal-btn modal-btn-secondary" id="modal-cancel">Keep it</button>
-          <button class="modal-btn modal-btn-primary" id="modal-confirm">Clear</button>
         </div>
       </div>
     </div>
@@ -1058,16 +1106,19 @@
        ========================================================================== */
     const CONFIG = {
       PASSCODE: "030826",
-      COOLDOWN_MS: 1500
+      COOLDOWN_MS: 1200
     };
 
     const STATE = {
-      user: null, // "AYUSH" or "SIMAR"
+      user: "AYUSH", // Defaults to AYUSH, syncs dynamic role
+      partner: "SIMAR",
       activePage: "page-home",
       lastInteraction: 0,
-      gardenPlants: ["🌱", "🌸", "🌿", "🌼", "✨"],
       gardenState: ["🌱", "🌸"],
-      memories: []
+      memories: [],
+      // Scribble Vector History Stack
+      strokes: [],
+      redoStack: []
     };
 
     // Lightweight Cross-Tab Broadcast Channel (Provides real-time state sync across tabs/devices)
@@ -1092,7 +1143,6 @@
     const mainWorld = document.getElementById("main-world");
     const codeContainer = document.getElementById("code-boxes");
 
-    // Focus input on box click
     codeContainer.addEventListener("click", () => hiddenInput.focus());
 
     hiddenInput.addEventListener("input", (e) => {
@@ -1136,46 +1186,176 @@
         entryScreen.style.display = "none";
         mainWorld.classList.add("visible");
         initCanvas();
-        // Prompt for user identity if not chosen
-        if (!STATE.user) {
-          STATE.user = Math.random() > 0.5 ? "AYUSH" : "SIMAR";
-        }
       }, 2000);
     }
 
     /* ==========================================================================
-       2. DYNAMIC LIVING TIME-OF-DAY SYSTEM
+       2. CONTINUOUS TIME-OF-DAY ATMOSPHERE INTERPOLATION ENGINE
        ========================================================================== */
-    function updateTimeOfDay() {
-      const hour = new Date().getHours();
-      const body = document.body;
-      const badge = document.getElementById("time-badge");
-
-      body.classList.remove("theme-morning", "theme-afternoon", "theme-evening", "theme-night");
-
-      if (hour >= 5 && hour < 11) {
-        body.classList.add("theme-morning");
-        badge.textContent = "Morning 🌅";
-      } else if (hour >= 11 && hour < 16.5) {
-        body.classList.add("theme-afternoon");
-        badge.textContent = "Afternoon ☀️";
-      } else if (hour >= 16.5 && hour < 19) {
-        body.classList.add("theme-evening");
-        badge.textContent = "Golden Hour 🌇";
-      } else {
-        body.classList.add("theme-night");
-        badge.textContent = "Night 🌙";
+    // Keyframes definition across 24 hours (0 to 24)
+    const SKY_KEYFRAMES = [
+      {
+        hour: 5.0, // Early Dawn / Morning start
+        top: [255, 231, 168],    // #FFE7A8
+        bottom: [255, 253, 247], // #FFFDF7
+        accent: [255, 184, 77],  // #FFB84D
+        glassBg: [255, 255, 255, 0.65],
+        glassBorder: [255, 255, 255, 0.8],
+        textMain: [61, 53, 53],  // #3D3535
+        textMuted: [140, 122, 120],
+        cloudFill: [255, 255, 255],
+        canvasBg: [255, 253, 247],
+        moonOpacity: 0,
+        badge: "Morning 🌅",
+        mascotMouth: "M54 48 C57 52, 63 52, 66 48" // Cute Smile
+      },
+      {
+        hour: 11.0, // Midday / Afternoon
+        top: [255, 209, 102],   // #FFD166
+        bottom: [255, 244, 214], // #FFF4D6
+        accent: [255, 159, 67],  // #FF9F43
+        glassBg: [255, 255, 255, 0.6],
+        glassBorder: [255, 255, 255, 0.75],
+        textMain: [64, 48, 40],
+        textMuted: [130, 110, 100],
+        cloudFill: [255, 255, 255],
+        canvasBg: [255, 253, 247],
+        moonOpacity: 0,
+        badge: "Afternoon ☀️",
+        mascotMouth: "M54 48 C57 52, 63 52, 66 48"
+      },
+      {
+        hour: 16.5, // Sunset / Golden Hour start
+        top: [255, 159, 67],    // #FF9F43
+        bottom: [255, 231, 168], // #FFE7A8
+        accent: [230, 81, 0],    // #E65100
+        glassBg: [255, 248, 240, 0.58],
+        glassBorder: [255, 255, 255, 0.65],
+        textMain: [44, 24, 16],
+        textMuted: [120, 85, 75],
+        cloudFill: [255, 242, 225],
+        canvasBg: [255, 248, 240],
+        moonOpacity: 0,
+        badge: "Golden Hour 🌇",
+        mascotMouth: "M54 48 C57 52, 63 52, 66 48"
+      },
+      {
+        hour: 19.0, // Evening Dusk into Night
+        top: [26, 28, 41],      // #1A1C29
+        bottom: [13, 14, 21],    // #0D0E15
+        accent: [255, 209, 102], // #FFD166
+        glassBg: [30, 34, 53, 0.55],
+        glassBorder: [255, 255, 255, 0.12],
+        textMain: [240, 230, 210],
+        textMuted: [160, 155, 176],
+        cloudFill: [42, 46, 69],
+        canvasBg: [24, 27, 40],
+        moonOpacity: 0.85,
+        badge: "Night 🌙",
+        mascotMouth: "M54 50 C58 50, 62 50, 66 50" // Sleepy cute Line
+      },
+      {
+        hour: 24.0, // Midnight Loop Point
+        top: [26, 28, 41],
+        bottom: [13, 14, 21],
+        accent: [255, 209, 102],
+        glassBg: [30, 34, 53, 0.55],
+        glassBorder: [255, 255, 255, 0.12],
+        textMain: [240, 230, 210],
+        textMuted: [160, 155, 176],
+        cloudFill: [42, 46, 69],
+        canvasBg: [24, 27, 40],
+        moonOpacity: 0.85,
+        badge: "Night 🌙",
+        mascotMouth: "M54 50 C58 50, 62 50, 66 50"
       }
+    ];
+
+    function lerp(start, end, factor) {
+      return start + (end - start) * factor;
     }
-    setInterval(updateTimeOfDay, 60000);
-    updateTimeOfDay();
+
+    function lerpColor(c1, c2, factor) {
+      const r = Math.round(lerp(c1[0], c2[0], factor));
+      const g = Math.round(lerp(c1[1], c2[1], factor));
+      const b = Math.round(lerp(c1[2], c2[2], factor));
+      const a = c1[3] !== undefined ? lerp(c1[3], c2[3], factor) : 1;
+      return a < 1 ? `rgba(${r}, ${g}, ${b}, ${a.toFixed(2)})` : `rgb(${r}, ${g}, ${b})`;
+    }
+
+    let currentSkyState = { isNight: false, accentColor: "#FF9F43" };
+
+    function updateLivingTimeOfDay() {
+      const now = new Date();
+      const currentHour = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+
+      // Find surrounding keyframes
+      let k1 = SKY_KEYFRAMES[0];
+      let k2 = SKY_KEYFRAMES[1];
+
+      for (let i = 0; i < SKY_KEYFRAMES.length - 1; i++) {
+        if (currentHour >= SKY_KEYFRAMES[i].hour && currentHour <= SKY_KEYFRAMES[i + 1].hour) {
+          k1 = SKY_KEYFRAMES[i];
+          k2 = SKY_KEYFRAMES[i + 1];
+          break;
+        }
+      }
+
+      const factor = (currentHour - k1.hour) / (k2.hour - k1.hour || 1);
+
+      // Interpolate CSS variables
+      const topColor = lerpColor(k1.top, k2.top, factor);
+      const bottomColor = lerpColor(k1.bottom, k2.bottom, factor);
+      const accentColor = lerpColor(k1.accent, k2.accent, factor);
+      const glassBg = lerpColor(k1.glassBg, k2.glassBg, factor);
+      const glassBorder = lerpColor(k1.glassBorder, k2.glassBorder, factor);
+      const textMain = lerpColor(k1.textMain, k2.textMain, factor);
+      const textMuted = lerpColor(k1.textMuted, k2.textMuted, factor);
+      const cloudFill = lerpColor(k1.cloudFill, k2.cloudFill, factor);
+      const canvasBg = lerpColor(k1.canvasBg, k2.canvasBg, factor);
+      const moonOpacity = lerp(k1.moonOpacity, k2.moonOpacity, factor);
+
+      const root = document.documentElement;
+      root.style.setProperty("--bg-sky-top", topColor);
+      root.style.setProperty("--bg-sky-bottom", bottomColor);
+      root.style.setProperty("--accent-primary", accentColor);
+      root.style.setProperty("--glass-bg", glassBg);
+      root.style.setProperty("--glass-border", glassBorder);
+      root.style.setProperty("--text-main", textMain);
+      root.style.setProperty("--text-muted", textMuted);
+      root.style.setProperty("--cloud-fill", cloudFill);
+      root.style.setProperty("--canvas-bg", canvasBg);
+
+      // Celestial elements updates
+      const moonEl = document.getElementById("moon-element");
+      if (moonOpacity > 0.1) {
+        moonEl.classList.add("visible");
+        moonEl.style.opacity = moonOpacity;
+      } else {
+        moonEl.classList.remove("visible");
+      }
+
+      // Time badge title update
+      document.getElementById("time-badge").textContent = factor < 0.5 ? k1.badge : k2.badge;
+
+      // Update mascot mouth expression
+      const mascotMouth = document.getElementById("mascot-mouth");
+      if (mascotMouth) mascotMouth.setAttribute("d", k1.mascotMouth);
+
+      currentSkyState.isNight = currentHour >= 19 || currentHour < 5;
+      currentSkyState.accentColor = accentColor;
+    }
+
+    setInterval(updateLivingTimeOfDay, 10000); // Gentle updates every 10 sec
+    updateLivingTimeOfDay();
 
     /* ==========================================================================
-       3. AMBIENT PARTICLE ENGINE (CANVAS)
+       3. AMBIENT PARTICLE & SHOOTING STARS ENGINE
        ========================================================================== */
     const ambCanvas = document.getElementById("ambient-canvas");
     const ambCtx = ambCanvas.getContext("2d");
     let particles = [];
+    let shootingStars = [];
 
     function resizeAmbientCanvas() {
       ambCanvas.width = window.innerWidth;
@@ -1185,14 +1365,12 @@
     resizeAmbientCanvas();
 
     class Particle {
-      constructor() {
-        this.reset();
-      }
+      constructor() { this.reset(); }
       reset() {
         this.x = Math.random() * ambCanvas.width;
         this.y = Math.random() * ambCanvas.height;
-        this.size = Math.random() * 3 + 1;
-        this.speedY = -(Math.random() * 0.4 + 0.1);
+        this.size = Math.random() * 2.5 + 1;
+        this.speedY = -(Math.random() * 0.3 + 0.1);
         this.speedX = Math.sin(Math.random() * Math.PI) * 0.2;
         this.opacity = Math.random() * 0.5 + 0.2;
       }
@@ -1202,21 +1380,64 @@
         if (this.y < -10) this.reset();
       }
       draw() {
-        ambCtx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+        ambCtx.fillStyle = currentSkyState.isNight
+          ? `rgba(255, 255, 255, ${this.opacity})`
+          : `rgba(255, 200, 120, ${this.opacity * 0.7})`;
         ambCtx.beginPath();
         ambCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ambCtx.fill();
       }
     }
 
-    for (let i = 0; i < 25; i++) particles.push(new Particle());
+    class ShootingStar {
+      constructor() { this.reset(); }
+      reset() {
+        this.x = Math.random() * ambCanvas.width;
+        this.y = Math.random() * (ambCanvas.height * 0.4);
+        this.len = Math.random() * 80 + 40;
+        this.speed = Math.random() * 8 + 4;
+        this.size = Math.random() * 1.5 + 0.5;
+        this.active = false;
+      }
+      trigger() {
+        this.reset();
+        this.active = true;
+      }
+      update() {
+        if (!this.active) return;
+        this.x -= this.speed;
+        this.y += this.speed * 0.6;
+        if (this.x < -100 || this.y > ambCanvas.height) this.active = false;
+      }
+      draw() {
+        if (!this.active) return;
+        const grad = ambCtx.createLinearGradient(this.x, this.y, this.x + this.len, this.y - this.len * 0.6);
+        grad.addColorStop(0, "rgba(255, 255, 255, 1)");
+        grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+        ambCtx.strokeStyle = grad;
+        ambCtx.lineWidth = this.size;
+        ambCtx.beginPath();
+        ambCtx.moveTo(this.x, this.y);
+        ambCtx.lineTo(this.x + this.len, this.y - this.len * 0.6);
+        ambCtx.stroke();
+      }
+    }
+
+    for (let i = 0; i < 30; i++) particles.push(new Particle());
+    for (let i = 0; i < 3; i++) shootingStars.push(new ShootingStar());
+
+    // Occasional shooting star trigger during night
+    setInterval(() => {
+      if (currentSkyState.isNight && Math.random() > 0.4) {
+        const star = shootingStars.find(s => !s.active);
+        if (star) star.trigger();
+      }
+    }, 8000);
 
     function animateParticles() {
       ambCtx.clearRect(0, 0, ambCanvas.width, ambCanvas.height);
-      particles.forEach(p => {
-        p.update();
-        p.draw();
-      });
+      particles.forEach(p => { p.update(); p.draw(); });
+      shootingStars.forEach(s => { s.update(); s.draw(); });
       requestAnimationFrame(animateParticles);
     }
     animateParticles();
@@ -1240,6 +1461,7 @@
 
         if (target === "page-scribble") {
           resizeScribbleCanvas();
+          showMascotSpeech("let's doodle ☁️");
         }
       });
     });
@@ -1262,6 +1484,13 @@
       }, 3000);
     }
 
+    function showMascotSpeech(text) {
+      const bubble = document.getElementById("mascot-bubble");
+      bubble.textContent = text;
+      bubble.classList.add("visible");
+      setTimeout(() => bubble.classList.remove("visible"), 3500);
+    }
+
     function emitEvent(type, payload = {}) {
       const now = Date.now();
       if (now - STATE.lastInteraction < CONFIG.COOLDOWN_MS) return false;
@@ -1269,7 +1498,7 @@
 
       const eventData = { type, sender: STATE.user, payload, timestamp: now };
       realtimeChannel.postMessage(eventData);
-      handleIncomingEvent(eventData, true); // Local optimistic execution
+      handleIncomingEvent(eventData, true);
       return true;
     }
 
@@ -1292,7 +1521,7 @@
           break;
 
         case "THINKING":
-          if (!isSelf) showToast(`Someone is thinking of you.`, "✦");
+          if (!isSelf) showToast(`${sender} is thinking of you.`, "✦");
           growGarden("✨");
           break;
 
@@ -1300,8 +1529,11 @@
           if (!isSelf) showToast(`${sender} shared a random spark!`, "✨");
           break;
 
-        case "DRAW_STROKE":
-          if (!isSelf) renderRemoteStroke(payload);
+        case "DRAW_STROKE_BATCH":
+          if (!isSelf) {
+            STATE.strokes.push(payload.stroke);
+            renderCanvasStrokes();
+          }
           break;
 
         case "DRAW_CURSOR":
@@ -1310,6 +1542,14 @@
 
         case "CLEAR_CANVAS":
           if (!isSelf) executeClearCanvas();
+          break;
+
+        case "UNDO_CANVAS":
+          if (!isSelf) executeUndo();
+          break;
+
+        case "REDO_CANVAS":
+          if (!isSelf) executeRedo();
           break;
 
         case "SAVE_DRAWING":
@@ -1339,6 +1579,12 @@
       if (emitEvent("RANDOM")) triggerHaptic("light");
     });
 
+    // Mascot Tap Reaction
+    document.getElementById("main-mascot-btn").addEventListener("click", () => {
+      showMascotSpeech("sending cozy sky vibes ✨");
+      triggerHaptic("light");
+    });
+
     // Shared Garden Logic
     function growGarden(symbol) {
       const gardenPlot = document.getElementById("garden-plot");
@@ -1353,7 +1599,7 @@
         gardenPlot.appendChild(el);
       });
     }
-    growGarden("🌱"); // initial plant
+    growGarden("🌱");
 
     // Random Prompt Generator
     const PROMPTS = [
@@ -1371,7 +1617,7 @@
     });
 
     /* ==========================================================================
-       6. COLLABORATIVE REAL-TIME SCRIBBLE CANVAS
+       6. REAL-TIME VECTOR-BASED COLLABORATIVE SCRIBBLE CANVAS
        ========================================================================== */
     const canvas = document.getElementById("scribble-canvas");
     const ctx = canvas.getContext("2d");
@@ -1381,19 +1627,16 @@
     let isDrawing = false;
     let currentTool = "pen";
     let currentColor = "#4A3E3D";
+    let currentStroke = null;
     let cursorTimeout = null;
 
     function resizeScribbleCanvas() {
       const rect = wrapper.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
 
-      // Save content before resize
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       canvas.width = rect.width;
       canvas.height = rect.height;
-      ctx.putImageData(imgData, 0, 0);
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
+      renderCanvasStrokes();
     }
 
     window.addEventListener("resize", resizeScribbleCanvas);
@@ -1402,7 +1645,6 @@
       resizeScribbleCanvas();
     }
 
-    // Canvas Event Listeners
     function getCanvasCoordinates(e) {
       const rect = canvas.getBoundingClientRect();
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -1416,44 +1658,57 @@
     function startDrawing(e) {
       isDrawing = true;
       const coords = getCanvasCoordinates(e);
-      drawStroke(coords.x, coords.y, coords.x, coords.y, currentColor, currentTool, true);
-    }
 
-    let lastX = 0, lastY = 0;
+      currentStroke = {
+        id: Date.now() + Math.random(),
+        tool: currentTool,
+        color: currentColor,
+        points: [coords]
+      };
+
+      STATE.strokes.push(currentStroke);
+      STATE.redoStack = []; // Clear redo stack on new stroke
+      renderCanvasStrokes();
+    }
 
     function handlePointerMove(e) {
       const coords = getCanvasCoordinates(e);
 
-      // Emit cursor presence position
+      // Emit subtle cursor presence
       realtimeChannel.postMessage({
         type: "DRAW_CURSOR",
         sender: STATE.user,
         payload: { x: coords.x, y: coords.y }
       });
 
-      if (!isDrawing) return;
+      if (!isDrawing || !currentStroke) return;
 
-      drawStroke(lastX, lastY, coords.x, coords.y, currentColor, currentTool, true);
-      lastX = coords.x;
-      lastY = coords.y;
+      currentStroke.points.push(coords);
+      renderCanvasStrokes();
     }
 
     function stopDrawing() {
+      if (!isDrawing || !currentStroke) return;
       isDrawing = false;
+
+      // Broadcast completed vector stroke to partner
+      emitEvent("DRAW_STROKE_BATCH", { stroke: currentStroke });
+
+      // Trigger subtle reaction sparkle
+      if (currentStroke.points.length > 2) {
+        const lastPt = currentStroke.points[currentStroke.points.length - 1];
+        createStrokeSparkle(lastPt.x, lastPt.y);
+      }
+
+      currentStroke = null;
     }
 
-    canvas.addEventListener("mousedown", (e) => {
-      const coords = getCanvasCoordinates(e);
-      lastX = coords.x; lastY = coords.y;
-      startDrawing(e);
-    });
+    canvas.addEventListener("mousedown", (e) => { startDrawing(e); });
     canvas.addEventListener("mousemove", handlePointerMove);
     window.addEventListener("mouseup", stopDrawing);
 
     canvas.addEventListener("touchstart", (e) => {
       e.preventDefault();
-      const coords = getCanvasCoordinates(e);
-      lastX = coords.x; lastY = coords.y;
       startDrawing(e);
     }, { passive: false });
 
@@ -1464,37 +1719,54 @@
 
     window.addEventListener("touchend", stopDrawing);
 
-    function drawStroke(x1, y1, x2, y2, color, tool, emit = false) {
+    function renderCanvasStrokes() {
       const w = canvas.width;
       const h = canvas.height;
 
-      ctx.beginPath();
-      ctx.moveTo(x1 * w, y1 * h);
-      ctx.lineTo(x2 * w, y2 * h);
+      ctx.clearRect(0, 0, w, h);
 
-      if (tool === "eraser") {
-        ctx.strokeStyle = "#FFFDF7";
-        ctx.lineWidth = 24;
-      } else if (tool === "marker") {
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 14;
-        ctx.globalAlpha = 0.4;
-      } else {
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 4;
+      STATE.strokes.forEach(stroke => {
+        if (!stroke.points || stroke.points.length === 0) return;
+
+        ctx.beginPath();
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        if (stroke.tool === "eraser") {
+          ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--canvas-bg").trim() || "#FFFDF7";
+          ctx.lineWidth = 24;
+          ctx.globalAlpha = 1.0;
+        } else if (stroke.tool === "marker") {
+          ctx.strokeStyle = stroke.color;
+          ctx.lineWidth = 14;
+          ctx.globalAlpha = 0.4;
+        } else {
+          ctx.strokeStyle = stroke.color;
+          ctx.lineWidth = 4;
+          ctx.globalAlpha = 1.0;
+        }
+
+        const pts = stroke.points;
+        ctx.moveTo(pts[0].x * w, pts[0].y * h);
+
+        for (let i = 1; i < pts.length; i++) {
+          ctx.lineTo(pts[i].x * w, pts[i].y * h);
+        }
+
+        ctx.stroke();
         ctx.globalAlpha = 1.0;
-      }
-
-      ctx.stroke();
-      ctx.globalAlpha = 1.0;
-
-      if (emit) {
-        emitEvent("DRAW_STROKE", { x1, y1, x2, y2, color, tool });
-      }
+      });
     }
 
-    function renderRemoteStroke(payload) {
-      drawStroke(payload.x1, payload.y1, payload.x2, payload.y2, payload.color, payload.tool, false);
+    function createStrokeSparkle(normX, normY) {
+      if (Math.random() > 0.5) return; // Rare trigger
+      const sparkle = document.createElement("div");
+      sparkle.className = "stroke-sparkle";
+      sparkle.textContent = "✨";
+      sparkle.style.left = `${normX * wrapper.clientWidth}px`;
+      sparkle.style.top = `${normY * wrapper.clientHeight}px`;
+      wrapper.appendChild(sparkle);
+      setTimeout(() => sparkle.remove(), 800);
     }
 
     function updateRemoteCursor(payload) {
@@ -1508,7 +1780,7 @@
       clearTimeout(cursorTimeout);
       cursorTimeout = setTimeout(() => {
         remoteCursor.classList.remove("visible");
-      }, 2000);
+      }, 2500);
     }
 
     // Canvas Toolbar Bindings
@@ -1530,7 +1802,34 @@
       });
     });
 
-    // Canvas Clearing with Dialog Confirmation
+    // Undo & Redo Actions
+    document.getElementById("tool-undo").addEventListener("click", () => {
+      executeUndo();
+      emitEvent("UNDO_CANVAS");
+    });
+
+    document.getElementById("tool-redo").addEventListener("click", () => {
+      executeRedo();
+      emitEvent("REDO_CANVAS");
+    });
+
+    function executeUndo() {
+      if (STATE.strokes.length > 0) {
+        STATE.redoStack.push(STATE.strokes.pop());
+        renderCanvasStrokes();
+        triggerHaptic("light");
+      }
+    }
+
+    function executeRedo() {
+      if (STATE.redoStack.length > 0) {
+        STATE.strokes.push(STATE.redoStack.pop());
+        renderCanvasStrokes();
+        triggerHaptic("light");
+      }
+    }
+
+    // Canvas Clearing with Confirmation & Save Option
     const modal = document.getElementById("modal-overlay");
     document.getElementById("tool-clear").addEventListener("click", () => {
       modal.classList.add("active");
@@ -1540,6 +1839,13 @@
       modal.classList.remove("active");
     });
 
+    document.getElementById("modal-save-first").addEventListener("click", () => {
+      modal.classList.remove("active");
+      saveDrawingToGallery("Our clear-first masterpiece");
+      executeClearCanvas();
+      emitEvent("CLEAR_CANVAS");
+    });
+
     document.getElementById("modal-confirm").addEventListener("click", () => {
       modal.classList.remove("active");
       executeClearCanvas();
@@ -1547,18 +1853,29 @@
     });
 
     function executeClearCanvas() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      STATE.strokes = [];
+      STATE.redoStack = [];
+      renderCanvasStrokes();
       showToast("Canvas cleared", "🗑️");
     }
 
-    // Save Moment to Gallery
+    // Save Drawing
     document.getElementById("tool-save").addEventListener("click", () => {
+      saveDrawingToGallery();
+    });
+
+    function saveDrawingToGallery(customTitle) {
+      if (STATE.strokes.length === 0) {
+        showToast("Draw something first!", "✏️");
+        return;
+      }
+
       const dataUrl = canvas.toDataURL();
       const newMemory = {
         id: Date.now(),
         image: dataUrl,
         date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-        title: "Shared Doodle"
+        title: customTitle || "Our shared masterpiece"
       };
 
       STATE.memories.unshift(newMemory);
@@ -1566,7 +1883,7 @@
       emitEvent("SAVE_DRAWING", newMemory);
       showToast("Saved to Memories!", "💾");
       triggerHaptic("success");
-    });
+    }
 
     /* ==========================================================================
        7. SHARED GALLERY SYSTEM
@@ -1596,3 +1913,4 @@
   </script>
 </body>
 </html>
+
